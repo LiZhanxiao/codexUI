@@ -14,14 +14,14 @@ const APPROVAL_POLICIES = new Set([
 export type CodexSandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access'
 export type CodexApprovalPolicy = 'untrusted' | 'on-failure' | 'on-request' | 'never'
 
-type AppServerRuntimeConfig = {
+export type AppServerRuntimeConfig = {
   sandboxMode: CodexSandboxMode
   approvalPolicy: CodexApprovalPolicy
 }
 
 const DEFAULT_RUNTIME_CONFIG: AppServerRuntimeConfig = {
-  sandboxMode: 'danger-full-access',
-  approvalPolicy: 'never',
+  sandboxMode: 'workspace-write',
+  approvalPolicy: 'on-request',
 }
 
 function normalizeRuntimeValue(value: string | undefined): string {
@@ -49,6 +49,10 @@ export function resolveAppServerRuntimeConfig(): AppServerRuntimeConfig {
     sandboxMode: readSandboxModeFromEnv(),
     approvalPolicy: readApprovalPolicyFromEnv(),
   }
+}
+
+export function isUnsafeAppServerRuntimeConfig(config: AppServerRuntimeConfig = resolveAppServerRuntimeConfig()): boolean {
+  return config.sandboxMode === 'danger-full-access' && config.approvalPolicy === 'never'
 }
 
 export function buildAppServerArgs(): string[] {

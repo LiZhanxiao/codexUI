@@ -257,6 +257,15 @@
         </div>
 
         <template v-if="!isDictationRecording">
+          <span
+            v-if="showFullAccessWarning"
+            class="thread-composer-runtime-warning"
+            :title="fullAccessWarningTitle"
+            :aria-label="fullAccessWarningTitle"
+          >
+            {{ t('Full access') }}
+          </span>
+
           <ComposerDropdown
             class="thread-composer-control"
             :model-value="selectedModel"
@@ -410,6 +419,7 @@ import {
   removeComposerPrompt,
   searchComposerFiles,
   uploadFile,
+  type AppServerRuntimeConfig,
   type ComposerFileSuggestion,
   type ComposerPromptInfo,
 } from '../../api/codexGateway'
@@ -444,6 +454,7 @@ const props = defineProps<{
   skills?: SkillItem[]
   threadTokenUsage?: UiThreadTokenUsage | null
   codexQuota?: UiRateLimitSnapshot | null
+  runtimeConfig?: AppServerRuntimeConfig | null
   isTurnInProgress?: boolean
   isStopPending?: boolean
   isInterruptingTurn?: boolean
@@ -657,6 +668,10 @@ const standaloneFileAttachments = computed(() => {
 })
 const isInteractionDisabled = computed(() => props.disabled || !props.activeThreadId)
 const isComposerConfigDisabled = computed(() => props.disabled || !props.activeThreadId)
+const showFullAccessWarning = computed(() => props.runtimeConfig?.isUnsafe === true)
+const fullAccessWarningTitle = computed(() =>
+  t('Full local access is enabled and Codex will not ask for approvals.'),
+)
 const isFastModeSupported = computed(() => /^gpt-5\.(?:4|5)(?:$|-)/.test(props.selectedModel.trim()))
 const showFastModeModelIcon = computed(() =>
   props.selectedSpeedMode === 'fast' && isFastModeSupported.value,
@@ -2208,6 +2223,10 @@ watch(
 
 .thread-composer-control {
   @apply shrink-1 min-w-0;
+}
+
+.thread-composer-runtime-warning {
+  @apply inline-flex h-8 shrink-0 items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 text-xs font-medium text-amber-800;
 }
 
 .thread-composer-control :deep(.composer-dropdown-value) {

@@ -926,6 +926,7 @@
                   :skills="installedSkills"
                   :thread-token-usage="selectedThreadTokenUsage"
                   :codex-quota="codexQuota"
+                  :runtime-config="appServerRuntimeConfig"
                   :is-turn-in-progress="false"
                   :is-stop-pending="false"
                   :is-interrupting-turn="false" :send-with-enter="sendWithEnter" :in-progress-submit-mode="inProgressSendMode"
@@ -1007,6 +1008,7 @@
                     :skills="installedSkills"
                     :thread-token-usage="selectedThreadTokenUsage"
                     :codex-quota="codexQuota"
+                    :runtime-config="appServerRuntimeConfig"
                     :is-turn-in-progress="isSelectedThreadInProgress"
                     :is-stop-pending="isSelectedThreadInterruptPending"
                     :is-interrupting-turn="isInterruptingTurn"
@@ -1129,6 +1131,7 @@ import {
   createPermanentWorktree,
   createWorktree,
   createProjectlessThreadDirectory,
+  getAppServerRuntimeConfig,
   getGitBranchState,
   getGitBranchCommits,
   getGitRepositoryStatus,
@@ -1156,7 +1159,7 @@ import {
 } from './api/codexGateway'
 import type { ReasoningEffort, SpeedMode, UiAccountEntry, UiRateLimitWindow, UiServerRequest, UiServerRequestReply, UiThreadAutomation, UiThreadTokenUsage } from './types/codex'
 import type { ComposerDraftPayload, ThreadComposerExposed } from './components/content/ThreadComposer.vue'
-import type { GitCommitOption, LocalDirectoryEntry, TelegramStatus, ThreadTerminalQuickCommand, WorktreeBranchOption } from './api/codexGateway'
+import type { AppServerRuntimeConfig, GitCommitOption, LocalDirectoryEntry, TelegramStatus, ThreadTerminalQuickCommand, WorktreeBranchOption } from './api/codexGateway'
 import { getFreeModeStatus, setFreeMode, setFreeModeCustomKey, setCustomProvider } from './api/codexGateway'
 import { getPathLeafName, getPathParent, isProjectlessChatPath, normalizePathForUi } from './pathUtils.js'
 
@@ -1581,6 +1584,7 @@ const telegramStatus = ref<TelegramStatus>({
   allowAllUsers: false,
   lastError: '',
 })
+const appServerRuntimeConfig = ref<AppServerRuntimeConfig | null>(null)
 const mobileHiddenAtMs = ref<number | null>(null)
 const mobileResumeReloadTriggered = ref(false)
 const mobileResumeSyncInProgress = ref(false)
@@ -2007,6 +2011,7 @@ onMounted(() => {
   void refreshDefaultProjectName()
   void refreshTelegramConfig()
   void refreshTelegramStatus()
+  void refreshAppServerRuntimeConfig()
   void loadFreeModeStatus()
   void refreshThreadTerminalStatus()
   void refreshTerminalQuickCommands()
@@ -2102,6 +2107,14 @@ watch(accounts, () => {
 
 function onSkillsChanged(): void {
   void refreshSkills()
+}
+
+async function refreshAppServerRuntimeConfig(): Promise<void> {
+  try {
+    appServerRuntimeConfig.value = await getAppServerRuntimeConfig()
+  } catch {
+    appServerRuntimeConfig.value = null
+  }
 }
 
 async function refreshTelegramStatus(): Promise<void> {

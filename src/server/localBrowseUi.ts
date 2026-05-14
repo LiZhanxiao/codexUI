@@ -30,6 +30,14 @@ const TEXT_EDITABLE_EXTENSIONS = new Set([
   '.sh', '.toml', '.ini', '.conf', '.sql', '.bat', '.cmd', '.ps1',
 ])
 
+const ACTIVE_LOCAL_SOURCE_EXTENSIONS = new Set([
+  '.html',
+  '.htm',
+  '.svg',
+  '.xml',
+  '.xhtml',
+])
+
 function languageForPath(pathValue: string): string {
   const extension = extname(pathValue).toLowerCase()
   switch (extension) {
@@ -80,6 +88,10 @@ export function decodeBrowsePath(rawPath: string): string {
 
 export function isTextEditablePath(pathValue: string): boolean {
   return TEXT_EDITABLE_EXTENSIONS.has(extname(pathValue).toLowerCase())
+}
+
+export function isActiveLocalSourcePath(pathValue: string): boolean {
+  return ACTIVE_LOCAL_SOURCE_EXTENSIONS.has(extname(pathValue).toLowerCase())
 }
 
 function isHiddenName(value: string): boolean {

@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url'
 import { dirname, extname, isAbsolute, join } from 'node:path'
 import type { Server as HttpServer, IncomingMessage } from 'node:http'
-import { existsSync } from 'node:fs'
+import { createReadStream, existsSync } from 'node:fs'
 import { writeFile, stat } from 'node:fs/promises'
 import express, { type Express } from 'express'
 import { createCodexBridgeMiddleware } from './codexAppServerBridge.js'
 import { createAuthSession } from './authMiddleware.js'
-import { createDirectoryListingHtml, createTextEditorHtml, decodeBrowsePath, getLocalDirectoryListing, isTextEditableFile, normalizeLocalPath } from './localBrowseUi.js'
+import { createDirectoryListingHtml, createTextEditorHtml, decodeBrowsePath, getLocalDirectoryListing, isActiveLocalSourcePath, isTextEditableFile, normalizeLocalPath } from './localBrowseUi.js'
 import { WebSocketServer, type WebSocket } from 'ws'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -72,6 +72,20 @@ function readWildcardPathParam(value: unknown): string {
   return ''
 }
 
+function sendActiveLocalSourceFile(res: express.Response, localPath: string): void {
+  res.setHeader('Cache-Control', 'private, no-store')
+  res.setHeader('Content-Disposition', 'inline')
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+
+  const stream = createReadStream(localPath)
+  stream.on('error', () => {
+    if (!res.headersSent) res.status(404).json({ error: 'File not found.' })
+    else res.end()
+  })
+  stream.pipe(res)
+}
+
 export function createServer(options: ServerOptions = {}): ServerInstance {
   const app = express()
   const bridge = createCodexBridgeMiddleware()
@@ -86,7 +100,7 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
   app.use(bridge)
 
   // 3. Serve local images referenced in markdown (desktop parity for absolute image paths)
-  app.get('/codex-local-image', (req, res) => {
+  app.get('/codex-local-image', async (req, res) => {
     const rawPath = typeof req.query.path === 'string' ? req.query.path : ''
     const localPath = normalizeLocalImagePath(rawPath)
     if (!localPath || !isAbsolute(localPath)) {
@@ -100,6 +114,20 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
       return
     }
 
+    if (isActiveLocalSourcePath(localPath)) {
+      try {
+        const fileStat = await stat(localPath)
+        if (!fileStat.isFile()) {
+          res.status(404).json({ error: 'Image file not found.' })
+          return
+        }
+        sendActiveLocalSourceFile(res, localPath)
+      } catch {
+        res.status(404).json({ error: 'Image file not found.' })
+      }
+      return
+    }
+
     res.type(contentType)
     res.setHeader('Cache-Control', 'private, max-age=300')
     res.sendFile(localPath, { dotfiles: 'allow' }, (error) => {
@@ -109,7 +137,7 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
   })
 
   // 4. Serve local files inline for direct file open.
-  app.get('/codex-local-file', (req, res) => {
+  app.get('/codex-local-file', async (req, res) => {
     const rawPath = typeof req.query.path === 'string' ? req.query.path : ''
     const localPath = normalizeLocalPath(rawPath)
     if (!localPath || !isAbsolute(localPath)) {
@@ -118,6 +146,20 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
     }
 
     res.setHeader('Cache-Control', 'private, no-store')
+    if (isActiveLocalSourcePath(localPath)) {
+      try {
+        const fileStat = await stat(localPath)
+        if (!fileStat.isFile()) {
+          res.status(404).json({ error: 'File not found.' })
+          return
+        }
+        sendActiveLocalSourceFile(res, localPath)
+      } catch {
+        res.status(404).json({ error: 'File not found.' })
+      }
+      return
+    }
+
     res.setHeader('Content-Disposition', 'inline')
     res.sendFile(localPath, { dotfiles: 'allow' }, (error) => {
       if (!error) return
@@ -149,7 +191,7 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
     }
   })
 
-  // 6. Serve local files by path to preserve relative asset loading for HTML.
+  // 6. Serve local files by path. Active source files are rendered as source, not executed.
   app.get('/codex-local-browse/*path', async (req, res) => {
     const rawPath = readWildcardPathParam(req.params.path)
     const localPath = decodeBrowsePath(`/${rawPath}`)
@@ -165,6 +207,15 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
       if (fileStat.isDirectory()) {
         const html = await createDirectoryListingHtml(localPath, { newProjectName })
         res.status(200).type('text/html; charset=utf-8').send(html)
+        return
+      }
+
+      if (isActiveLocalSourcePath(localPath)) {
+        if (!fileStat.isFile()) {
+          res.status(400).json({ error: 'Expected file path.' })
+          return
+        }
+        sendActiveLocalSourceFile(res, localPath)
         return
       }
 

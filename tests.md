@@ -372,6 +372,38 @@ SEC-001 app-server runtime default hardening and composer full-access status.
 
 ---
 
+### Local active source files render as source text
+
+#### Feature/Change Name
+SEC-002 local file browse active-content hardening.
+
+#### Prerequisites/Setup
+1. Dev server running (`pnpm run dev --host 127.0.0.1 --port 4173`).
+2. A project folder contains sample `.html`, `.svg`, `.xml`, and normal image files.
+3. Light theme and dark theme are available from the appearance switcher.
+
+#### Steps
+1. Run the unit test: `pnpm exec vitest run src/server/httpServer.localFiles.test.ts`.
+2. In light theme, open a project thread that references a local `.html` file.
+3. Click the rendered file link so it opens through `/codex-local-browse/...`.
+4. Confirm the browser displays the file source text instead of rendering/executing the HTML page.
+5. Directly open `/codex-local-file?path=<absolute-html-path>` and confirm it also displays source text.
+6. Directly open `/codex-local-image?path=<absolute-svg-path>` and confirm SVG source text is displayed instead of an active SVG document.
+7. Confirm response headers for active source paths include `Content-Type: text/plain; charset=utf-8` and `X-Content-Type-Options: nosniff`.
+8. Open a normal `.png` or `.jpg` through the existing local image/file flow and confirm image preview still works.
+9. Switch to dark theme and repeat steps 2-8.
+
+#### Expected Results
+- `.html`, `.htm`, `.svg`, `.xml`, and `.xhtml` files are shown as source text in local browse/direct-file flows.
+- Active local source files cannot execute JavaScript under the CodexUI origin.
+- Directory browsing and normal image preview continue to work.
+- The behavior is consistent in light theme and dark theme.
+
+#### Rollback/Cleanup
+- Remove any temporary sample files created for the test.
+
+---
+
 ### Qodo feedback diagnostics reliability fixes
 
 #### Feature/Change Name

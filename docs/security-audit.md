@@ -69,7 +69,7 @@ Validation:
 ### SEC-002: Local file browser serves arbitrary absolute files on the app origin
 
 Severity: High
-Status: Open
+Status: First fix implemented
 
 Evidence:
 - `src/server/httpServer.ts`: `/codex-local-browse/*path` serves local paths.
@@ -84,8 +84,25 @@ Recommended fix:
 - Never execute local HTML/JS in the privileged app origin.
 - Add explicit allowlists or project-root scoping where possible.
 
+Decision notes:
+- Agreed on 2026-05-14: local project HTML should behave like source-code viewing in CodexUI, not like same-origin web preview.
+- Agreed on 2026-05-14: the first fix should prevent active local files such as HTML from executing under the CodexUI origin. Safe source viewing is preferred over inline preview.
+- Agreed on 2026-05-14: first-fix active source treatment includes `.html`, `.htm`, `.svg`, `.xml`, and `.xhtml`.
+- Agreed on 2026-05-14: `/codex-local-browse` should serve those active source files as plain text with MIME sniffing disabled. A richer source viewer/editor should be treated as a later feature.
+- Agreed on 2026-05-14: `/codex-local-file?path=...` must receive the same active-source protection so it cannot bypass `/codex-local-browse` hardening.
+- Previewing runnable HTML should happen through a project dev server or a future isolated preview design, not through `/codex-local-browse` in the privileged app origin.
+
+Implementation notes:
+- Implemented on 2026-05-14: active local source extensions are recognized centrally in `localBrowseUi`.
+- Implemented on 2026-05-14: `/codex-local-browse`, `/codex-local-file`, and SVG requests through `/codex-local-image` return active source files as `text/plain; charset=utf-8` with `X-Content-Type-Options: nosniff`.
+- Implemented on 2026-05-14: active source responses are streamed instead of read fully into memory.
+
 Validation:
 - Create a local HTML file that attempts to call `/codex-api/*`; verify it cannot access privileged APIs.
+- `pnpm exec vitest run src/server/httpServer.localFiles.test.ts` passed.
+- `pnpm run build:frontend` passed.
+- `pnpm run build:cli` passed.
+- Built CLI endpoint checks confirmed `/codex-local-browse`, `/codex-local-file`, and `/codex-local-image` return active source examples as plain text with `nosniff`.
 
 ### SEC-003: Local text editor can write arbitrary absolute text-like paths
 

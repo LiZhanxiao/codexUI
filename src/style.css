@@ -283,6 +283,10 @@
   @apply text-zinc-400 hover:text-zinc-200;
 }
 
+:root.dark .thread-composer-runtime-warning {
+  @apply border-amber-500/50 bg-amber-950/60 text-amber-200;
+}
+
 :root.dark .thread-composer-submit {
   @apply bg-zinc-200 text-zinc-900 hover:bg-white;
 }

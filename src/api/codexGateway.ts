@@ -64,6 +64,12 @@ type CurrentModelConfig = {
   speedMode: SpeedMode
 }
 
+export type AppServerRuntimeConfig = {
+  sandboxMode: 'read-only' | 'workspace-write' | 'danger-full-access'
+  approvalPolicy: 'untrusted' | 'on-failure' | 'on-request' | 'never'
+  isUnsafe: boolean
+}
+
 export type DirectoryPluginSummary = {
   id: string
   name: string
@@ -1941,6 +1947,37 @@ export async function getCurrentModelConfig(): Promise<CurrentModelConfig> {
   const reasoningEffort = normalizeReasoningEffort(payload.config.model_reasoning_effort)
   const speedMode = normalizeSpeedMode(payload.config.service_tier)
   return { model, providerId, reasoningEffort, speedMode }
+}
+
+export async function getAppServerRuntimeConfig(): Promise<AppServerRuntimeConfig> {
+  const response = await fetch('/codex-api/runtime-config')
+  const payload = await readJsonResponse(response)
+  if (!response.ok) {
+    throw new Error(getErrorMessageFromPayload(payload, 'Failed to load Codex runtime configuration'))
+  }
+  const data = asRecord(payload)
+  const sandboxMode = readString(data?.sandboxMode)
+  const approvalPolicy = readString(data?.approvalPolicy)
+  if (
+    sandboxMode !== 'read-only' &&
+    sandboxMode !== 'workspace-write' &&
+    sandboxMode !== 'danger-full-access'
+  ) {
+    throw new Error('Invalid Codex runtime sandbox mode')
+  }
+  if (
+    approvalPolicy !== 'untrusted' &&
+    approvalPolicy !== 'on-failure' &&
+    approvalPolicy !== 'on-request' &&
+    approvalPolicy !== 'never'
+  ) {
+    throw new Error('Invalid Codex runtime approval policy')
+  }
+  return {
+    sandboxMode,
+    approvalPolicy,
+    isUnsafe: data?.isUnsafe === true,
+  }
 }
 
 function normalizeDirectoryPluginApp(value: unknown): DirectoryPluginAppSummary | null {

@@ -18,6 +18,7 @@ import {
   resolveCodexCommand,
 } from '../commandResolution.js'
 import {
+  isUnsafeAppServerRuntimeConfig,
   parseApprovalPolicy,
   parseSandboxMode,
   resolveAppServerRuntimeConfig,
@@ -566,6 +567,13 @@ async function startServer(options: {
     `  Codex sandbox: ${runtimeConfig.sandboxMode}`,
     `  Approval policy: ${runtimeConfig.approvalPolicy}`,
   ]
+  if (isUnsafeAppServerRuntimeConfig(runtimeConfig)) {
+    lines.push(
+      '',
+      '  WARNING: CodexUI is running with full local access and no approvals.',
+      '  Only use this mode on a trusted personal machine.',
+    )
+  }
   const accessUrls = getAccessibleUrls(port)
   if (accessUrls.length > 0) {
     lines.push(`  Local:    ${accessUrls[0]}`)

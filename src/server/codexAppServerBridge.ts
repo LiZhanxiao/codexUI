@@ -11,7 +11,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { createInterface } from 'node:readline'
 import { writeFile } from 'node:fs/promises'
 import { handleAccountRoutes } from './accountRoutes.js'
-import { buildAppServerArgs } from './appServerRuntimeConfig.js'
+import { buildAppServerArgs, isUnsafeAppServerRuntimeConfig, resolveAppServerRuntimeConfig } from './appServerRuntimeConfig.js'
 import { handleReviewRoutes } from './reviewGit.js'
 import { handleSkillsRoutes, initializeSkillsSyncOnStartup } from './skillsRoutes.js'
 import { TelegramThreadBridge } from './telegramThreadBridge.js'
@@ -4709,11 +4709,7 @@ class AppServerProcess {
   }
 
   private buildAppServerConfig(): { args: string[]; env: Record<string, string> } {
-    const args = [
-      'app-server',
-      '-c', 'approval_policy="never"',
-      '-c', 'sandbox_mode="danger-full-access"',
-    ]
+    const args = [...this.appServerArgs]
     let extraEnv: Record<string, string> = {}
     const serverPort = parseInt(process.env.CODEXUI_SERVER_PORT ?? '', 10) || undefined
     const statePath = join(getCodexHomeDir(), FREE_MODE_STATE_FILE)
@@ -6200,6 +6196,16 @@ export function createCodexBridgeMiddleware(): CodexBridgeMiddleware {
 
       if (req.method === 'POST' && url.pathname === '/codex-api/upload-file') {
         handleFileUpload(req, res)
+        return
+      }
+
+      if (req.method === 'GET' && url.pathname === '/codex-api/runtime-config') {
+        const runtimeConfig = resolveAppServerRuntimeConfig()
+        setJson(res, 200, {
+          sandboxMode: runtimeConfig.sandboxMode,
+          approvalPolicy: runtimeConfig.approvalPolicy,
+          isUnsafe: isUnsafeAppServerRuntimeConfig(runtimeConfig),
+        })
         return
       }
 

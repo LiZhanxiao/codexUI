@@ -40,6 +40,8 @@ const zhCN: Record<string, string> = {
   'Click to toggle dictation': '点击切换语音输入',
   'Auto send dictation': '语音输入后自动发送',
   'Provider': '提供方',
+  'Full access': '完全访问',
+  'Full local access is enabled and Codex will not ask for approvals.': '已启用完整本地访问权限，Codex 不会请求审批。',
   'Choose the API provider for the Codex backend': '选择 Codex 后端使用的 API 提供方',
   'OpenRouter API key': 'OpenRouter API Key',
   'Get API key': '获取 API Key',

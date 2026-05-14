@@ -336,6 +336,42 @@ Rollback/cleanup:
 
 ---
 
+### Codex runtime safer defaults and full-access warning
+
+#### Feature/Change Name
+SEC-001 app-server runtime default hardening and composer full-access status.
+
+#### Prerequisites/Setup
+1. Dev server can be started with `pnpm run dev --host 127.0.0.1 --port 4173`.
+2. A product/CLI startup path is available without setting `CODEXUI_SANDBOX_MODE` or `CODEXUI_APPROVAL_POLICY`.
+3. Light theme and dark theme are available from the appearance switcher.
+
+#### Steps
+1. Run the unit test: `pnpm exec vitest run src/server/appServerRuntimeConfig.test.ts`.
+2. Start the app without `CODEXUI_SANDBOX_MODE` or `CODEXUI_APPROVAL_POLICY`.
+3. Call `GET /codex-api/runtime-config`.
+4. Confirm the response reports `sandboxMode: "workspace-write"`, `approvalPolicy: "on-request"`, and `isUnsafe: false`.
+5. Open the composer in light theme and confirm no `Full access` warning pill is visible.
+6. Start the app with `CODEXUI_SANDBOX_MODE=danger-full-access CODEXUI_APPROVAL_POLICY=never`.
+7. Confirm startup output includes a warning about full local access and no approvals.
+8. Call `GET /codex-api/runtime-config` again and confirm `isUnsafe: true`.
+9. Open the composer in light theme and confirm the `Full access` warning pill is visible near the composer controls.
+10. Hover or inspect the warning and confirm the title says full local access is enabled and Codex will not ask for approvals.
+11. Switch to dark theme and repeat steps 9-10.
+
+#### Expected Results
+- Normal startup uses `workspace-write + on-request`.
+- Explicit unsafe startup still works for trusted local development.
+- The app-server bridge and temporary account-validation app-server both consume the centralized runtime config.
+- The composer warning is read-only and does not imply per-message permission switching.
+- The warning is visible and legible in both light theme and dark theme.
+
+#### Rollback/Cleanup
+- Stop the temporary dev server.
+- Unset `CODEXUI_SANDBOX_MODE` and `CODEXUI_APPROVAL_POLICY` after unsafe-mode testing.
+
+---
+
 ### Qodo feedback diagnostics reliability fixes
 
 #### Feature/Change Name
